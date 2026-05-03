@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prajwalika Get Together – Attendance</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .event-header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    .event-header h1 {
+      font-size: 2.2rem;
+      color: #f5c518;
+      letter-spacing: 2px;
+      text-shadow: 0 0 20px rgba(245, 197, 24, 0.4);
+      font-weight: 700;
+    }
+    .event-header p {
+      color: #a0b4cc;
+      font-size: 1rem;
+      margin-top: 8px;
+      letter-spacing: 1px;
+    }
+
+    /* ---- Mark Attendance Tile ---- */
+    .tile-container {
+      display: flex;
+      justify-content: center;
+    }
+    .attendance-tile {
+      background: linear-gradient(135deg, #e94560, #c23152);
+      border-radius: 24px;
+      padding: 56px 72px;
+      cursor: pointer;
+      text-align: center;
+      box-shadow: 0 8px 40px rgba(233, 69, 96, 0.45), 0 2px 8px rgba(0,0,0,0.3);
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+      user-select: none;
+    }
+    .attendance-tile:hover {
+      transform: translateY(-6px) scale(1.03);
+      box-shadow: 0 16px 56px rgba(233, 69, 96, 0.6), 0 4px 16px rgba(0,0,0,0.4);
+    }
+    .attendance-tile:active {
+      transform: scale(0.97);
+    }
+    .tile-icon { font-size: 3.2rem; margin-bottom: 16px; }
+    .tile-label {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 1px;
+    }
+
+    /* ---- Modal Overlay ---- */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.72);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .overlay.active { display: flex; }
+
+    .modal {
+      background: #1e2a3a;
+      border-radius: 20px;
+      padding: 36px 32px;
+      width: 100%;
+      max-width: 460px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+      border: 1px solid rgba(255,255,255,0.08);
+      animation: popIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes popIn {
+      from { transform: scale(0.85); opacity: 0; }
+      to   { transform: scale(1);    opacity: 1; }
+    }
+
+    .modal h2 {
+      color: #f5c518;
+      font-size: 1.4rem;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .modal p.subtitle {
+      color: #8a9bb0;
+      font-size: 0.9rem;
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    /* ---- Form Elements ---- */
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      color: #a0b4cc;
+      font-size: 0.82rem;
+      margin-bottom: 6px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 12px 16px;
+      background: #0f1e2e;
+      border: 1.5px solid #2a3f55;
+      border-radius: 10px;
+      color: #e0eaf5;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus,
+    .form-group select:focus {
+      border-color: #e94560;
+    }
+    .form-group select option { background: #0f1e2e; }
+
+    /* ---- Buttons ---- */
+    .btn {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.18s, transform 0.18s;
+      margin-top: 8px;
+    }
+    .btn:hover { opacity: 0.88; transform: translateY(-1px); }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: #e94560; color: #fff; }
+    .btn-success { background: #27ae60; color: #fff; }
+    .btn-outline {
+      background: transparent;
+      border: 1.5px solid #2a3f55;
+      color: #8a9bb0;
+    }
+    .btn-outline:hover { border-color: #e94560; color: #e94560; opacity: 1; }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .btn-row .btn { margin-top: 0; }
+
+    /* ---- Name Card / Detail Card ---- */
+    .name-card {
+      background: linear-gradient(135deg, #0f3460, #16213e);
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid rgba(245, 197, 24, 0.3);
+    }
+    .name-card .greeting { color: #8a9bb0; font-size: 0.85rem; margin-bottom: 4px; text-align: center; }
+    .name-card .person-name { color: #f5c518; font-size: 1.45rem; font-weight: 700; text-align: center; margin-bottom: 16px; }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .detail-item {
+      background: rgba(0,0,0,0.25);
+      border-radius: 8px;
+      padding: 9px 12px;
+    }
+    .detail-item.full-width { grid-column: 1 / -1; }
+    .detail-item .d-label {
+      color: #5a7a99;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 3px;
+    }
+    .detail-item .d-value {
+      color: #c8dff0;
+      font-size: 0.88rem;
+      font-weight: 500;
+      word-break: break-word;
+    }
+    .detail-item .d-value.empty { color: #3d5566; font-style: italic; }
+
+    /* ---- Success State ---- */
+    .success-box {
+      text-align: center;
+    }
+    .success-box .checkmark { font-size: 4rem; margin-bottom: 12px; }
+    .success-box h2 { color: #27ae60; font-size: 1.5rem; margin-bottom: 8px; }
+    .success-box p { color: #8a9bb0; font-size: 0.95rem; }
+
+    /* ---- Error / Info text ---- */
+    .error-msg {
+      color: #e94560;
+      font-size: 0.85rem;
+      margin-top: 6px;
+      text-align: center;
+    }
+    .info-msg {
+      color: #f5c518;
+      font-size: 0.88rem;
+      margin-bottom: 14px;
+      background: rgba(245,197,24,0.08);
+      padding: 10px 14px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    /* ---- Loading Spinner ---- */
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 3px solid rgba(255,255,255,0.25);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ---- Section divider ---- */
+    .divider {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      margin: 20px 0;
+    }
+
+    .already-marked {
+      background: rgba(39, 174, 96, 0.12);
+      border: 1px solid rgba(39,174,96,0.3);
+      border-radius: 10px;
+      padding: 14px;
+      text-align: center;
+      color: #27ae60;
+      font-size: 0.95rem;
+      margin-bottom: 16px;
+    }
+
+    /* scroll inside modal for registration form */
+    .modal.scrollable {
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    @media (max-width: 480px) {
+      .attendance-tile { padding: 44px 40px; }
+      .tile-label { font-size: 1.3rem; }
+      .event-header h1 { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="event-header">
+    <h1>&#127881; Prajwalika Get Together</h1>
+    <p>Alumni Reunion — Welcome Home!</p>
+  </div>
+
+  <div class="tile-container">
+    <div class="attendance-tile" onclick="openPhoneModal()">
+      <div class="tile-icon">&#9989;</div>
+      <div class="tile-label">Mark Attendance</div>
+    </div>
+  </div>
+
+  <!-- ===== STEP 1: Phone Number Modal ===== -->
+  <div class="overlay" id="overlay-phone">
+    <div class="modal">
+      <h2>&#128222; Enter Phone Number</h2>
+      <p class="subtitle">Use the number you provided in the Google Form</p>
+      <div class="form-group">
+        <label>Mobile Number</label>
+        <input type="tel" id="input-phone" placeholder="e.g. 9876543210" maxlength="15"
+               oninput="this.value=this.value.replace(/[^0-9+\s-]/g,'')"
+               onkeydown="if(event.key==='Enter') checkPhone()" />
+      </div>
+      <div class="error-msg" id="phone-error"></div>
+      <button class="btn btn-primary" id="btn-check-phone" onclick="checkPhone()">Search</button>
+      <button class="btn btn-outline" style="margin-top:10px" onclick="closeAll()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- ===== STEP 1b: Not Found — Ask Before Form ===== -->
+  <div class="overlay" id="overlay-not-found">
+    <div class="modal">
+      <div style="text-align:center; margin-bottom:20px;">
+        <div style="font-size:3rem; margin-bottom:12px;">&#128269;</div>
+        <h2 style="color:#e94560;">Number Not Found</h2>
+        <p class="subtitle" style="margin-bottom:0;">The mobile number <strong id="nf-phone" style="color:#e0eaf5;"></strong> is not in our records.</p>
+      </div>
+      <div style="background:rgba(245,197,24,0.08); border:1px solid rgba(245,197,24,0.2); border-radius:12px; padding:16px; text-align:center; margin-bottom:24px;">
+        <p style="color:#f5c518; font-size:0.95rem; font-weight:600;">Would you like to fill in your details and mark attendance?</p>
+      </div>
+      <button class="btn btn-success" onclick="openRegisterForm()">&#128196; Yes, Fill the Form</button>
+      <button class="btn btn-outline" style="margin-top:10px" onclick="goBackToPhone()">&#8592; Try Another Number</button>
+    </div>
+  </div>
+
+  <!-- ===== STEP 2a: Found — Confirm Identity ===== -->
+  <div class="overlay" id="overlay-confirm">
+    <div class="modal scrollable">
+      <h2>&#128075; Is this you?</h2>
+      <p class="subtitle">We found your record — please verify</p>
+      <div class="name-card">
+        <div class="greeting">Found record for</div>
+        <div class="person-name" id="confirm-name"></div>
+        <div class="detail-grid">
+          <div class="detail-item">
+            <div class="d-label">Batch</div>
+            <div class="d-value" id="cd-batch">—</div>
+          </div>
+          <div class="detail-item">
+            <div class="d-label">College</div>
+            <div class="d-value" id="cd-college">—</div>
+          </div>
+          <div class="detail-item">
+            <div class="d-label">Native Place</div>
+            <div class="d-value" id="cd-native">—</div>
+          </div>
+          <div class="detail-item">
+            <div class="d-label">Current Residence</div>
+            <div class="d-value" id="cd-residence">—</div>
+          </div>
+          <div class="detail-item">
+            <div class="d-label">Mobile Number</div>
+            <div class="d-value" id="cd-mobile">—</div>
+          </div>
+          <div class="detail-item">
+            <div class="d-label">RSVP Status</div>
+            <div class="d-value" id="cd-rsvp">—</div>
+          </div>
+          <div class="detail-item full-width">
+            <div class="d-label">Designation</div>
+            <div class="d-value" id="cd-designation">—</div>
+          </div>
+          <div class="detail-item full-width">
+            <div class="d-label">Organization</div>
+            <div class="d-value" id="cd-org">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="already-marked" id="already-marked-msg" style="display:none">
+        &#10003; You have already marked attendance!
+      </div>
+      <div class="btn-row" id="confirm-buttons">
+        <button class="btn btn-success" onclick="markAttendance()">&#10003; Yes, Mark Attendance</button>
+        <button class="btn btn-outline" onclick="goBackToPhone()">Not Me</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== STEP 2b: Not Found — Registration Form ===== -->
+  <div class="overlay" id="overlay-register">
+    <div class="modal scrollable">
+      <h2>&#128196; Add Your Details</h2>
+      <p class="subtitle">Your number wasn't found — please fill in your info</p>
+
+      <div class="info-msg">All fields help us keep our alumni database complete.</div>
+
+      <div class="form-group">
+        <label>Full Name *</label>
+        <input type="text" id="reg-name" placeholder="Your full name" />
+      </div>
+      <div class="form-group">
+        <label>Intermediate Batch *</label>
+        <select id="reg-batch">
+          <option value="">-- Select Batch --</option>
+          <option>2003-2005</option>
+          <option>2004-2006</option>
+          <option>2006-2008</option>
+          <option>2007-2009</option>
+          <option>2008-2010</option>
+          <option>2013-2015</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>College Name *</label>
+        <select id="reg-college">
+          <option value="">-- Select College --</option>
+          <option>Sri Chaitanya Junior College</option>
+          <option>Narayana Junior College</option>
+          <option>Krishna Chaitanya Junior College</option>
+          <option>Rathnam Junior College</option>
+          <option>Others</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Native Place</label>
+        <input type="text" id="reg-native" placeholder="Village / Town / District" />
+      </div>
+      <div class="form-group">
+        <label>Current Residence</label>
+        <input type="text" id="reg-residence" placeholder="City, State" />
+      </div>
+      <div class="form-group">
+        <label>Mobile Number *</label>
+        <input type="tel" id="reg-phone" placeholder="10-digit mobile number" maxlength="15" />
+      </div>
+      <div class="form-group">
+        <label>Current Designation</label>
+        <input type="text" id="reg-designation" placeholder="Job title / Role" />
+      </div>
+      <div class="form-group">
+        <label>Organization</label>
+        <input type="text" id="reg-org" placeholder="Company / Institution" />
+      </div>
+
+      <div class="error-msg" id="reg-error"></div>
+      <button class="btn btn-success" id="btn-save-reg" onclick="saveAndMarkAttendance()">
+        &#128190; Save &amp; Mark Attendance
+      </button>
+      <button class="btn btn-outline" style="margin-top:10px" onclick="goBackToPhone()">&#8592; Back</button>
+    </div>
+  </div>
+
+  <!-- ===== STEP 3: Success ===== -->
+  <div class="overlay" id="overlay-success">
+    <div class="modal">
+      <div class="success-box">
+        <div class="checkmark">&#127881;</div>
+        <h2>Attendance Marked!</h2>
+        <p id="success-msg">Welcome to Prajwalika Get Together!</p>
+        <button class="btn btn-primary" style="margin-top:28px" onclick="closeAll()">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =====================================================
+    //  CONFIGURATION — replace with your Supabase details
+    // =====================================================
+    const SUPABASE_URL = 'https://jtnxkkirnhyuexfyzvun.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0bnhra2lybmh5dWV4Znl6dnVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MzI1OTcsImV4cCI6MjA5MzMwODU5N30.CZPm1U-PFh3pr0CchlEIYhgJR4BR9zJ2pBNy8l2sxok';
+    // =====================================================
+
+    const { createClient } = supabase;
+    const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentRecord = null;
+    let currentPhone = '';
+
+    // ---- Helpers ----
+    function normPhone(val) {
+      // Strip all non-digits, then take last 10
+      const digits = val.replace(/\D/g, '');
+      return digits.slice(-10);
+    }
+
+    function showOverlay(id) {
+      document.querySelectorAll('.overlay').forEach(o => o.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    function closeAll() {
+      document.querySelectorAll('.overlay').forEach(o => o.classList.remove('active'));
+      currentRecord = null;
+      currentPhone = '';
+      document.getElementById('input-phone').value = '';
+      document.getElementById('phone-error').textContent = '';
+    }
+
+    function openPhoneModal() {
+      closeAll();
+      showOverlay('overlay-phone');
+      setTimeout(() => document.getElementById('input-phone').focus(), 100);
+    }
+
+    function goBackToPhone() {
+      showOverlay('overlay-phone');
+      document.getElementById('phone-error').textContent = '';
+    }
+
+    function openRegisterForm() {
+      const raw = document.getElementById('input-phone').value.trim();
+      clearRegForm();
+      document.getElementById('reg-phone').value = raw;
+      document.getElementById('reg-error').textContent = '';
+      showOverlay('overlay-register');
+    }
+
+    function setLoading(btnId, loading) {
+      const btn = document.getElementById(btnId);
+      if (loading) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Please wait...';
+      } else {
+        btn.disabled = false;
+      }
+    }
+
+    // ---- Step 1: Check phone ----
+    async function checkPhone() {
+      const raw = document.getElementById('input-phone').value.trim();
+      const phone = normPhone(raw);
+
+      if (phone.length < 10) {
+        document.getElementById('phone-error').textContent = 'Please enter a valid 10-digit mobile number.';
+        return;
+      }
+      document.getElementById('phone-error').textContent = '';
+      currentPhone = phone;
+
+      setLoading('btn-check-phone', true);
+      document.getElementById('btn-check-phone').textContent = '';
+      document.getElementById('btn-check-phone').innerHTML = '<span class="spinner"></span> Searching...';
+
+      try {
+        // Search for any number ending in these 10 digits
+        const { data, error } = await db
+          .from('attendees')
+          .select('*')
+          .or(`mobile_number.eq.${phone},mobile_number.eq.+91${phone},mobile_number.eq.91${phone}`)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (data) {
+          currentRecord = data;
+
+          function fill(id, val) {
+            const el = document.getElementById(id);
+            const v = (val || '').toString().trim();
+            el.textContent = v || '—';
+            el.classList.toggle('empty', !v);
+          }
+
+          fill('confirm-name', data.full_name);
+          fill('cd-batch',       data.intermediate_batch);
+          fill('cd-college',     data.college_name);
+          fill('cd-native',      data.native_place);
+          fill('cd-residence',   data.current_residence);
+          fill('cd-mobile',      data.mobile_number);
+          fill('cd-rsvp',        data.attending);
+          fill('cd-designation', data.current_designation);
+          fill('cd-org',         data.organization);
+
+          const alreadyMarked = data.attended === true;
+          document.getElementById('already-marked-msg').style.display = alreadyMarked ? 'block' : 'none';
+
+          if (alreadyMarked) {
+            document.getElementById('confirm-buttons').innerHTML =
+              '<button class="btn btn-outline" onclick="closeAll()">Close</button>';
+            document.getElementById('confirm-buttons').style.display = 'flex';
+          } else {
+            document.getElementById('confirm-buttons').innerHTML =
+              '<button class="btn btn-success" onclick="markAttendance()">&#10003; Yes, Mark Attendance</button>' +
+              '<button class="btn btn-outline" onclick="goBackToPhone()">Not Me</button>';
+            document.getElementById('confirm-buttons').style.display = 'flex';
+          }
+
+          showOverlay('overlay-confirm');
+        } else {
+          // Not found — show confirmation prompt first
+          document.getElementById('nf-phone').textContent = raw;
+          showOverlay('overlay-not-found');
+        }
+      } catch (err) {
+        document.getElementById('phone-error').textContent = 'Error: ' + (err.message || 'Could not connect to database.');
+      } finally {
+        const btn = document.getElementById('btn-check-phone');
+        btn.disabled = false;
+        btn.textContent = 'Search';
+      }
+    }
+
+    // ---- Step 2a: Mark attendance for existing record ----
+    async function markAttendance() {
+      if (!currentRecord) return;
+
+      const buttons = document.getElementById('confirm-buttons');
+      buttons.innerHTML = '<span class="spinner"></span> Marking...';
+
+      try {
+        const { error } = await db
+          .from('attendees')
+          .update({ attended: true, attended_at: new Date().toISOString() })
+          .eq('id', currentRecord.id);
+
+        if (error) throw error;
+
+        document.getElementById('success-msg').textContent =
+          `Welcome, ${currentRecord.full_name}! So glad you're here.`;
+        showOverlay('overlay-success');
+      } catch (err) {
+        buttons.innerHTML =
+          '<button class="btn btn-success" onclick="markAttendance()">&#10003; Yes, Mark Attendance</button>' +
+          '<button class="btn btn-outline" onclick="goBackToPhone()">Not Me</button>';
+        alert('Error marking attendance: ' + err.message);
+      }
+    }
+
+    // ---- Step 2b: Save new record + mark attendance ----
+    function clearRegForm() {
+      ['reg-name','reg-native','reg-residence','reg-designation','reg-org'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+      document.getElementById('reg-batch').value = '';
+      document.getElementById('reg-college').value = '';
+    }
+
+    async function saveAndMarkAttendance() {
+      const fullName   = document.getElementById('reg-name').value.trim();
+      const batch      = document.getElementById('reg-batch').value;
+      const college    = document.getElementById('reg-college').value;
+      const native     = document.getElementById('reg-native').value.trim();
+      const residence  = document.getElementById('reg-residence').value.trim();
+      const phoneRaw   = document.getElementById('reg-phone').value.trim();
+      const designation = document.getElementById('reg-designation').value.trim();
+      const org        = document.getElementById('reg-org').value.trim();
+
+      const phone = normPhone(phoneRaw);
+      const errEl = document.getElementById('reg-error');
+
+      if (!fullName) { errEl.textContent = 'Full name is required.'; return; }
+      if (!batch)    { errEl.textContent = 'Please select your batch.'; return; }
+      if (!college)  { errEl.textContent = 'Please select your college.'; return; }
+      if (phone.length < 10) { errEl.textContent = 'Please enter a valid mobile number.'; return; }
+      errEl.textContent = '';
+
+      setLoading('btn-save-reg', true);
+      document.getElementById('btn-save-reg').innerHTML = '<span class="spinner"></span> Saving...';
+
+      try {
+        const payload = {
+          full_name: fullName,
+          intermediate_batch: batch,
+          college_name: college,
+          native_place: native,
+          current_residence: residence,
+          mobile_number: phone,
+          attending: 'Yes I\'m Coming',
+          current_designation: designation,
+          organization: org,
+          attended: true,
+          attended_at: new Date().toISOString()
+        };
+
+        const { data, error } = await db
+          .from('attendees')
+          .insert([payload])
+          .select()
+          .single();
+
+        if (error) {
+          if (error.code === '23505') {
+            errEl.textContent = 'This phone number already exists. Please go back and search again.';
+          } else {
+            throw error;
+          }
+          return;
+        }
+
+        document.getElementById('success-msg').textContent =
+          `Welcome, ${fullName}! Your details have been saved and attendance marked.`;
+        showOverlay('overlay-success');
+      } catch (err) {
+        errEl.textContent = 'Error: ' + (err.message || 'Could not save. Please try again.');
+      } finally {
+        const btn = document.getElementById('btn-save-reg');
+        btn.disabled = false;
+        btn.innerHTML = '&#128190; Save &amp; Mark Attendance';
+      }
+    }
+  </script>
+</body>
+</html>
