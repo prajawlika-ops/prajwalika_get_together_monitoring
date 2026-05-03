@@ -37,10 +37,12 @@
       letter-spacing: 1px;
     }
 
-    /* ---- Mark Attendance Tile ---- */
+    /* ---- Tiles ---- */
     .tile-container {
       display: flex;
       justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
     }
     .attendance-tile {
       background: linear-gradient(135deg, #e94560, #c23152);
@@ -51,6 +53,8 @@
       box-shadow: 0 8px 40px rgba(233, 69, 96, 0.45), 0 2px 8px rgba(0,0,0,0.3);
       transition: transform 0.18s ease, box-shadow 0.18s ease;
       user-select: none;
+      text-decoration: none;
+      display: block;
     }
     .attendance-tile:hover {
       transform: translateY(-6px) scale(1.03);
@@ -59,6 +63,7 @@
     .attendance-tile:active {
       transform: scale(0.97);
     }
+
     .tile-icon { font-size: 3.2rem; margin-bottom: 16px; }
     .tile-label {
       font-size: 1.6rem;

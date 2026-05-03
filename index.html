@@ -112,6 +112,7 @@
     .stat-card.attended::before { background: #27ae60; }
     .stat-card.absent::before   { background: #e94560; }
     .stat-card.percent::before  { background: #f5c518; }
+    .stat-card.profiles::before { background: #9b59b6; }
 
     .stat-card .stat-icon { font-size: 1.8rem; margin-bottom: 10px; }
     .stat-card .stat-value {
@@ -124,6 +125,7 @@
     .stat-card.attended .stat-value { color: #27ae60; }
     .stat-card.absent .stat-value   { color: #e94560; }
     .stat-card.percent .stat-value  { color: #f5c518; }
+    .stat-card.profiles .stat-value { color: #9b59b6; }
     .stat-card .stat-label { color: #5a7a99; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px; }
 
     /* Progress bar inside stat cards */
@@ -308,12 +310,12 @@
     .time-text { color: #5a7a99; font-size: 0.78rem; }
 
     /* ---- Responsive ---- */
-    @media (max-width: 900px) {
-      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    @media (max-width: 1050px) {
+      .stats-grid { grid-template-columns: repeat(3, 1fr) !important; }
       .charts-row { grid-template-columns: 1fr 1fr; }
     }
     @media (max-width: 580px) {
-      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
       .charts-row { grid-template-columns: 1fr; }
       .topbar { padding: 14px 16px; flex-wrap: wrap; gap: 8px; }
       .container { padding: 20px 12px 0; }
@@ -348,7 +350,7 @@
 
       <!-- ===== STAT CARDS ===== -->
       <div class="section-title">&#128202; Overview</div>
-      <div class="stats-grid" style="margin-bottom:28px;">
+      <div class="stats-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:28px;">
         <div class="stat-card total">
           <div class="stat-icon">&#128101;</div>
           <div class="stat-value" id="s-total">—</div>
@@ -371,6 +373,12 @@
           <div class="stat-value" id="s-percent">—</div>
           <div class="stat-label">Attendance Rate</div>
           <div class="stat-bar"><div class="stat-bar-fill" id="bar-percent" style="width:0%;background:#f5c518"></div></div>
+        </div>
+        <div class="stat-card profiles">
+          <div class="stat-icon">&#128196;</div>
+          <div class="stat-value" id="s-profiles">—</div>
+          <div class="stat-label">Profiles Filled</div>
+          <div class="stat-bar"><div class="stat-bar-fill" id="bar-profiles" style="width:0%;background:#9b59b6"></div></div>
         </div>
       </div>
 
@@ -475,6 +483,7 @@
 
   let allData = [];
   let filteredData = [];
+  let profileCount = 0;
   let sortKey = '';
   let sortAsc = true;
   let chartBatch = null, chartCollege = null, chartDonut = null;
@@ -484,18 +493,19 @@
     document.getElementById('loading').style.display = 'flex';
     document.getElementById('main-content').style.display = 'none';
 
-    const { data, error } = await db
-      .from('attendees')
-      .select('*')
-      .order('full_name');
+    const [attResult, profResult] = await Promise.all([
+      db.from('attendees').select('*').order('full_name'),
+      db.from('profiles').select('id', { count: 'exact', head: true })
+    ]);
 
-    if (error) {
+    if (attResult.error) {
       document.getElementById('loading').innerHTML =
-        '<div style="color:#e94560;font-size:1rem;">&#9888; Error loading data: ' + error.message + '</div>';
+        '<div style="color:#e94560;font-size:1rem;">&#9888; Error loading data: ' + attResult.error.message + '</div>';
       return;
     }
 
-    allData = data || [];
+    allData = attResult.data || [];
+    profileCount = profResult.count || 0;
     buildReport();
     document.getElementById('loading').style.display = 'none';
     document.getElementById('main-content').style.display = 'block';
@@ -520,15 +530,19 @@
     const absent   = total - attended;
     const pct      = total > 0 ? Math.round((attended / total) * 100) : 0;
 
+    const profPct = attended > 0 ? Math.round((profileCount / attended) * 100) : 0;
+
     setText('s-total',    total);
     setText('s-attended', attended);
     setText('s-absent',   absent);
     setText('s-percent',  pct + '%');
+    setText('s-profiles', profileCount + ' / ' + attended);
 
     setTimeout(() => {
       setWidth('bar-attended', (attended / total) * 100);
       setWidth('bar-absent',   (absent   / total) * 100);
       setWidth('bar-percent',  pct);
+      setWidth('bar-profiles', profPct);
     }, 100);
   }
 

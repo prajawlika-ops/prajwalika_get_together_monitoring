@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prajwalika Get Together — Member Profile</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      background-attachment: fixed;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #c8dff0;
+      padding-bottom: 60px;
+    }
+
+    /* ---- Top Bar ---- */
+    .topbar {
+      background: rgba(15,30,46,0.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(245,197,24,0.2);
+      padding: 16px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topbar h1 { font-size: 1.2rem; color: #f5c518; font-weight: 700; }
+    .topbar .sub { color: #5a7a99; font-size: 0.78rem; margin-top: 2px; }
+    .topbar-links { display: flex; gap: 10px; }
+    .nav-btn {
+      padding: 7px 16px; border-radius: 8px; font-size: 0.82rem; font-weight: 600;
+      text-decoration: none; cursor: pointer; border: none;
+      transition: opacity 0.2s;
+    }
+    .nav-btn:hover { opacity: 0.82; }
+    .nav-btn-outline {
+      background: transparent; border: 1px solid #2a3f55; color: #8a9bb0;
+    }
+
+    /* ---- Progress Bar ---- */
+    .progress-wrap {
+      background: rgba(15,30,46,0.7);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      padding: 0 28px;
+      overflow-x: auto;
+    }
+    .progress-steps {
+      display: flex;
+      max-width: 900px;
+      margin: 0 auto;
+      gap: 0;
+    }
+    .step-tab {
+      flex: 1;
+      text-align: center;
+      padding: 13px 6px 10px;
+      font-size: 0.72rem;
+      color: #3d5566;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: color 0.2s, border-color 0.2s;
+      white-space: nowrap;
+      min-width: 80px;
+    }
+    .step-tab.active { color: #f5c518; border-bottom-color: #f5c518; }
+    .step-tab.done   { color: #27ae60; border-bottom-color: #27ae60; }
+    .step-tab .step-icon { font-size: 1.1rem; display: block; margin-bottom: 3px; }
+
+    /* ---- Container ---- */
+    .container {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 32px 20px 0;
+    }
+
+    /* ---- Step Panels ---- */
+    .step-panel { display: none; }
+    .step-panel.active { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ---- Section Header ---- */
+    .section-header {
+      margin-bottom: 24px;
+    }
+    .section-header h2 {
+      font-size: 1.3rem;
+      color: #f5c518;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .section-header p {
+      color: #5a7a99;
+      font-size: 0.85rem;
+    }
+
+    /* ---- Cards ---- */
+    .card {
+      background: rgba(30,42,58,0.85);
+      border-radius: 16px;
+      padding: 24px;
+      border: 1px solid rgba(255,255,255,0.07);
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: 0.8rem;
+      color: #f5c518;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(245,197,24,0.15);
+    }
+
+    /* ---- Form Groups ---- */
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .form-row.full { grid-template-columns: 1fr; }
+    .form-row.three { grid-template-columns: 1fr 1fr 1fr; }
+
+    .form-group { display: flex; flex-direction: column; }
+    .form-group label {
+      font-size: 0.75rem;
+      color: #7a9ab8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      padding: 11px 14px;
+      background: #0c1a28;
+      border: 1.5px solid #1e3347;
+      border-radius: 10px;
+      color: #e0eaf5;
+      font-size: 0.92rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      font-family: inherit;
+      width: 100%;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      border-color: #f5c518;
+      box-shadow: 0 0 0 3px rgba(245,197,24,0.08);
+    }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .form-group select option { background: #0c1a28; }
+
+    /* ---- Radio Group ---- */
+    .radio-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 2px;
+    }
+    .radio-option {
+      display: none;
+    }
+    .radio-label {
+      padding: 8px 16px;
+      border-radius: 20px;
+      border: 1.5px solid #1e3347;
+      color: #7a9ab8;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.18s;
+      user-select: none;
+    }
+    .radio-option:checked + .radio-label {
+      background: rgba(245,197,24,0.15);
+      border-color: #f5c518;
+      color: #f5c518;
+      font-weight: 600;
+    }
+
+    /* ---- Conditional sections ---- */
+    .conditional { display: none; }
+    .conditional.show { display: block; animation: fadeIn 0.25s ease; }
+
+    /* ---- Phone step ---- */
+    .phone-card {
+      max-width: 420px;
+      margin: 60px auto 0;
+    }
+    .phone-card .big-icon { text-align: center; font-size: 3.5rem; margin-bottom: 16px; }
+    .phone-card h2 { text-align: center; color: #f5c518; font-size: 1.4rem; margin-bottom: 6px; }
+    .phone-card p { text-align: center; color: #5a7a99; font-size: 0.88rem; margin-bottom: 28px; }
+    .error-msg { color: #e94560; font-size: 0.83rem; margin-top: 6px; text-align: center; }
+    .info-banner {
+      background: rgba(39,174,96,0.1);
+      border: 1px solid rgba(39,174,96,0.25);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: #27ae60;
+      font-size: 0.88rem;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .update-banner {
+      background: rgba(245,197,24,0.08);
+      border: 1px solid rgba(245,197,24,0.2);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: #f5c518;
+      font-size: 0.88rem;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    /* ---- Buttons ---- */
+    .btn {
+      padding: 13px 24px;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.18s, transform 0.15s;
+      font-family: inherit;
+    }
+    .btn:hover  { opacity: 0.86; transform: translateY(-1px); }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: #e94560; color: #fff; width: 100%; }
+    .btn-gold    { background: #f5c518; color: #1a1a2e; width: 100%; }
+    .btn-outline {
+      background: transparent;
+      border: 1.5px solid #2a3f55;
+      color: #7a9ab8;
+    }
+    .btn-outline:hover { border-color: #f5c518; color: #f5c518; opacity: 1; }
+
+    /* ---- Navigation row ---- */
+    .nav-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 28px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .nav-row .btn-outline { flex: 0 0 120px; }
+    .nav-row .btn-gold    { flex: 1; }
+    .nav-row .btn-primary { flex: 1; }
+
+    /* ---- Spinner ---- */
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2.5px solid rgba(255,255,255,0.25);
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 7px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ---- Success ---- */
+    .success-wrap {
+      max-width: 460px;
+      margin: 60px auto 0;
+      text-align: center;
+    }
+    .success-wrap .big-check { font-size: 5rem; margin-bottom: 16px; }
+    .success-wrap h2 { color: #27ae60; font-size: 1.6rem; margin-bottom: 10px; }
+    .success-wrap p  { color: #7a9ab8; font-size: 0.95rem; margin-bottom: 28px; }
+    .success-links { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .success-links a {
+      padding: 11px 22px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .success-links a:hover { opacity: 0.82; }
+    .link-gold    { background: #f5c518; color: #1a1a2e; }
+    .link-outline { background: transparent; border: 1.5px solid #2a3f55; color: #7a9ab8; }
+
+    /* ---- View Profile Grid ---- */
+    .view-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .view-item {
+      background: rgba(0,0,0,0.2);
+      border-radius: 8px;
+      padding: 10px 13px;
+    }
+    .view-item.span2 { grid-column: span 2; }
+    .view-item.span3 { grid-column: 1 / -1; }
+    .view-item .vi-label {
+      font-size: 0.7rem;
+      color: #4a6a88;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .view-item .vi-value {
+      color: #c8dff0;
+      font-size: 0.9rem;
+      font-weight: 500;
+      word-break: break-word;
+    }
+    .view-item .vi-value.empty { color: #2d4a5e; font-style: italic; font-size: 0.82rem; }
+
+    @media (max-width: 580px) {
+      .form-row { grid-template-columns: 1fr; }
+      .form-row.three { grid-template-columns: 1fr; }
+      .topbar { padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
+      .container { padding: 20px 14px 0; }
+      .view-grid { grid-template-columns: 1fr 1fr; }
+      .view-item.span2, .view-item.span3 { grid-column: 1 / -1; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="topbar">
+  <div>
+    <h1>&#127881; Prajwalika Get Together</h1>
+    <div class="sub">Member Profile Form</div>
+  </div>
+</div>
+
+<!-- Progress Steps -->
+<div class="progress-wrap" id="progress-wrap" style="display:none;">
+  <div class="progress-steps">
+    <div class="step-tab active" onclick="goToStep(1)" id="tab-1"><span class="step-icon">&#128100;</span>Personal</div>
+    <div class="step-tab"        onclick="goToStep(2)" id="tab-2"><span class="step-icon">&#128106;</span>Family</div>
+    <div class="step-tab"        onclick="goToStep(3)" id="tab-3"><span class="step-icon">&#127968;</span>Background</div>
+    <div class="step-tab"        onclick="goToStep(4)" id="tab-4"><span class="step-icon">&#127891;</span>Education</div>
+    <div class="step-tab"        onclick="goToStep(5)" id="tab-5"><span class="step-icon">&#128188;</span>Professional</div>
+    <div class="step-tab"        onclick="goToStep(6)" id="tab-6"><span class="step-icon">&#127968;</span>Address &amp; Community</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ===== STEP 0: Identify ===== -->
+  <div class="step-panel active" id="panel-0">
+    <div class="card phone-card">
+      <div class="big-icon">&#128196;</div>
+      <h2>Member Profile</h2>
+      <p>Enter your registered mobile number to fill or update your profile</p>
+      <div class="form-group">
+        <label>Mobile Number</label>
+        <input type="tel" id="ph-input" placeholder="e.g. 9876543210" maxlength="15"
+               oninput="this.value=this.value.replace(/[^0-9+\s-]/g,'')"
+               onkeydown="if(event.key==='Enter') startProfile()" />
+      </div>
+      <div class="error-msg" id="ph-error"></div>
+      <button class="btn btn-primary" id="btn-start" onclick="startProfile()" style="margin-top:16px;">
+        Continue &#8594;
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== STEP 1: Personal Details ===== -->
+  <div class="step-panel" id="panel-1">
+    <div class="section-header">
+      <h2>&#128100; Personal Details</h2>
+      <p>Basic information about you</p>
+    </div>
+
+    <div class="info-banner" id="profile-banner" style="display:none;"></div>
+    <div class="update-banner" id="update-banner" style="display:none;">&#9999; Updating existing profile — your previous answers are pre-filled.</div>
+
+    <div class="card">
+      <div class="card-title">&#128100; Basic Info</div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Full Name *</label>
+          <input type="text" id="p-name" placeholder="Your full name" />
+        </div>
+        <div class="form-group">
+          <label>Gender *</label>
+          <div class="radio-group">
+            <input type="radio" name="gender" value="Male"   id="g-male"   class="radio-option"><label for="g-male"   class="radio-label">Male</label>
+            <input type="radio" name="gender" value="Female" id="g-female" class="radio-option"><label for="g-female" class="radio-label">Female</label>
+            <input type="radio" name="gender" value="Other"  id="g-other"  class="radio-option"><label for="g-other"  class="radio-label">Other</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Date of Birth</label>
+          <input type="date" id="p-dob" />
+        </div>
+        <div class="form-group">
+          <label>Mobile Number</label>
+          <input type="tel" id="p-mobile" readonly style="opacity:0.5;cursor:not-allowed;" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Native District</label>
+          <input type="text" id="p-district" placeholder="e.g. Nellore" />
+        </div>
+        <div class="form-group">
+          <label>Native Village</label>
+          <input type="text" id="p-village" placeholder="Village / Town" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">&#128145; Marital Status</div>
+
+      <div class="form-row full">
+        <div class="form-group">
+          <label>Marital Status *</label>
+          <div class="radio-group">
+            <input type="radio" name="marital" value="Unmarried" id="m-single" class="radio-option" onchange="onMaritalChange()"><label for="m-single" class="radio-label">Unmarried</label>
+            <input type="radio" name="marital" value="Married"   id="m-married" class="radio-option" onchange="onMaritalChange()"><label for="m-married" class="radio-label">Married</label>
+            <input type="radio" name="marital" value="Divorced"  id="m-divorced" class="radio-option" onchange="onMaritalChange()"><label for="m-divorced" class="radio-label">Divorced</label>
+            <input type="radio" name="marital" value="Widowed"   id="m-widowed" class="radio-option" onchange="onMaritalChange()"><label for="m-widowed" class="radio-label">Widowed</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="conditional" id="married-section">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Marriage Anniversary Date</label>
+            <input type="date" id="p-anniversary" />
+          </div>
+          <div class="form-group">
+            <label>Number of Kids</label>
+            <input type="number" id="p-kids" min="0" max="20" placeholder="0" oninput="onKidsChange()" />
+          </div>
+        </div>
+      </div>
+
+      <div class="conditional" id="kids-section">
+        <div class="form-row full" style="margin-top:0;">
+          <div class="form-group">
+            <label>Names of Kids</label>
+            <textarea id="p-kids-names" placeholder="Enter names separated by commas&#10;e.g. Arjun, Priya"></textarea>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="nav-row">
+      <button class="btn btn-gold" onclick="goToStep(2)">Next: Family Details &#8594;</button>
+    </div>
+  </div>
+
+  <!-- ===== STEP 2: Family Details ===== -->
+  <div class="step-panel" id="panel-2">
+    <div class="section-header">
+      <h2>&#128106; Family Details</h2>
+      <p>Names of your immediate family members</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">&#128106; Parents</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Father's Name</label>
+          <input type="text" id="f-father" placeholder="Father's full name" />
+        </div>
+        <div class="form-group">
+          <label>Mother's Name</label>
+          <input type="text" id="f-mother" placeholder="Mother's full name" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="spouse-card">
+      <div class="card-title">&#128145; Spouse</div>
+      <div class="form-row full">
+        <div class="form-group">
+          <label>Name of Wife / Husband</label>
+          <input type="text" id="f-spouse" placeholder="Spouse's full name" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="kids-card" style="display:none;">
+      <div class="card-title">&#127774; Children</div>
+      <div class="form-row full">
+        <div class="form-group">
+          <label>Names of Kids (if not filled earlier)</label>
+          <textarea id="f-kids" placeholder="Enter each child's name on a new line or separated by commas"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn btn-outline" onclick="goToStep(1)">&#8592; Back</button>
+      <button class="btn btn-gold" onclick="goToStep(3)">Next: Family Background &#8594;</button>
+    </div>
+  </div>
+
+  <!-- ===== STEP 3: Family Background ===== -->
+  <div class="step-panel" id="panel-3">
+    <div class="section-header">
+      <h2>&#127968; Family Background</h2>
+      <p>Professions of your family members</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">&#128188; Professions</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Father's Profession</label>
+          <input type="text" id="bg-father" placeholder="e.g. Farmer, Teacher, Business" />
+        </div>
+        <div class="form-group">
+          <label>Mother's Profession</label>
+          <input type="text" id="bg-mother" placeholder="e.g. Homemaker, Nurse" />
+        </div>
+      </div>
+      <div class="form-row full">
+        <div class="form-group">
+          <label>Wife's / Husband's Profession</label>
+          <input type="text" id="bg-spouse" placeholder="Spouse's profession" />
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn btn-outline" onclick="goToStep(2)">&#8592; Back</button>
+      <button class="btn btn-gold" onclick="goToStep(4)">Next: Education &#8594;</button>
+    </div>
+  </div>
+
+  <!-- ===== STEP 4: Education Details ===== -->
+  <div class="step-panel" id="panel-4">
+    <div class="section-header">
+      <h2>&#127891; Education Details</h2>
+      <p>Your academic qualifications</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">&#127979; School &amp; Intermediate</div>
+      <div class="form-row three">
+        <div class="form-group">
+          <label>10th School Name</label>
+          <input type="text" id="e-school" placeholder="Name of your school" />
+        </div>
+        <div class="form-group">
+          <label>Year of Passout</label>
+          <select id="e-school-year"></select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1;"></div>
+      </div>
+      <div class="form-row three">
+        <div class="form-group">
+          <label>Intermediate College Name</label>
+          <input type="text" id="e-inter" placeholder="Junior College name" />
+        </div>
+        <div class="form-group">
+          <label>Year of Passout</label>
+          <select id="e-inter-year"></select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1;"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">&#127979; Graduation</div>
+      <div class="form-row three">
+        <div class="form-group">
+          <label>Degree</label>
+          <select id="e-grad-degree" onchange="onGradChange()">
+            <option value="">-- Not Applicable --</option>
+            <option>BSc</option>
+            <option>BCom</option>
+            <option>BA</option>
+            <option>BTech / BE</option>
+            <option>BBA</option>
+            <option>Polytechnic</option>
+            <option>Others</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Specialisation</label>
+          <input type="text" id="e-grad-spec" placeholder="e.g. Computer Science, Commerce" />
+        </div>
+        <div class="form-group">
+          <label>Year of Passout</label>
+          <select id="e-grad-year"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">&#127979; Post Graduation</div>
+      <div class="form-row three">
+        <div class="form-group">
+          <label>Degree</label>
+          <select id="e-pg-degree">
+            <option value="">-- Not Applicable --</option>
+            <option>MSc</option>
+            <option>MCom</option>
+            <option>MA</option>
+            <option>MTech / ME</option>
+            <option>MBA</option>
+            <option>MCA</option>
+            <option>Others</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Specialisation</label>
+          <input type="text" id="e-pg-spec" placeholder="e.g. Finance, Data Science" />
+        </div>
+        <div class="form-group">
+          <label>Year of Passout</label>
+          <select id="e-pg-year"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">&#127979; Other Higher Studies</div>
+      <div class="form-row three">
+        <div class="form-group" style="grid-column:1/3;">
+          <label>Any other qualifications / certifications</label>
+          <textarea id="e-other" placeholder="e.g. PhD, CA, UPSC, NDA, Diploma in…"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Year of Passout</label>
+          <select id="e-other-year"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn btn-outline" onclick="goToStep(3)">&#8592; Back</button>
+      <button class="btn btn-gold" onclick="goToStep(5)">Next: Professional &#8594;</button>
+    </div>
+  </div>
+
+  <!-- ===== STEP 5: Professional Details ===== -->
+  <div class="step-panel" id="panel-5">
+    <div class="section-header">
+      <h2>&#128188; Professional Details</h2>
+      <p>Your current employment and work details</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">&#128188; Employment Status</div>
+
+      <div class="form-row full">
+        <div class="form-group">
+          <label>Are you currently employed / working? *</label>
+          <div class="radio-group">
+            <input type="radio" name="employed" value="Yes" id="emp-yes" class="radio-option" onchange="onEmployedChange()"><label for="emp-yes" class="radio-label">Yes</label>
+            <input type="radio" name="employed" value="No"  id="emp-no"  class="radio-option" onchange="onEmployedChange()"><label for="emp-no"  class="radio-label">No</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="conditional" id="emp-type-section">
+        <div class="form-row full" style="margin-top:14px;">
+          <div class="form-group">
+            <label>Type of Employment *</label>
+            <div class="radio-group">
+              <input type="radio" name="emptype" value="Self Employed"    id="et-self"   class="radio-option" onchange="onEmpTypeChange()"><label for="et-self"   class="radio-label">&#127970; Self Employed</label>
+              <input type="radio" name="emptype" value="Private Employment" id="et-pvt"  class="radio-option" onchange="onEmpTypeChange()"><label for="et-pvt"   class="radio-label">&#127970; Private Employment</label>
+              <input type="radio" name="emptype" value="Govt Job-State"   id="et-gstate" class="radio-option" onchange="onEmpTypeChange()"><label for="et-gstate" class="radio-label">&#127963; Govt Job — State</label>
+              <input type="radio" name="emptype" value="Govt Job-Central" id="et-gcent"  class="radio-option" onchange="onEmpTypeChange()"><label for="et-gcent"  class="radio-label">&#127963; Govt Job — Central</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Self Employed -->
+        <div class="conditional" id="sect-self" style="margin-top:14px;">
+          <div class="form-row full">
+            <div class="form-group">
+              <label>Type of Business / Self Employment</label>
+              <input type="text" id="pr-self" placeholder="e.g. Agriculture, Medical Shop, Consultancy, Real Estate…" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Private Employment -->
+        <div class="conditional" id="sect-pvt" style="margin-top:14px;">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Company Name</label>
+              <input type="text" id="pr-company" placeholder="Name of the company" />
+            </div>
+            <div class="form-group">
+              <label>Designation</label>
+              <input type="text" id="pr-pvt-desig" placeholder="Your job title / role" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Govt Job -->
+        <div class="conditional" id="sect-govt" style="margin-top:14px;">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Department Name</label>
+              <input type="text" id="pr-dept" placeholder="e.g. Revenue, Education, Police" />
+            </div>
+            <div class="form-group">
+              <label>Designation</label>
+              <input type="text" id="pr-govt-desig" placeholder="Your grade / designation" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn btn-outline" onclick="goToStep(4)">&#8592; Back</button>
+      <button class="btn btn-gold" onclick="goToStep(6)">Next: Address &amp; Community &#8594;</button>
+    </div>
+  </div>
+
+  <!-- ===== STEP 6: Address & Community ===== -->
+  <div class="step-panel" id="panel-6">
+    <div class="section-header">
+      <h2>&#127968; Address &amp; Prajwalika Community</h2>
+      <p>Where you live and how you connect with the community</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">&#127968; Current Address</div>
+      <div class="form-row full">
+        <div class="form-group">
+          <label>Where are you currently staying?</label>
+          <textarea id="addr-current" rows="3" placeholder="House No / Street / Area, City, State, PIN"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">&#129309; Prajwalika Community</div>
+      <div class="form-row full">
+        <div class="form-group">
+          <label>What type of support do you need from Prajwalika Family?</label>
+          <textarea id="comm-support" rows="3" placeholder="e.g. Job referrals, Business networking, Medical assistance, Academic guidance for kids…"></textarea>
+        </div>
+      </div>
+      <div class="form-row full" style="margin-top:4px;">
+        <div class="form-group">
+          <label>What type of service / help can you give to Prajwalika Family?</label>
+          <textarea id="comm-service" rows="3" placeholder="e.g. Legal advice, Medical consultations, Teaching / tutoring, Financial guidance…"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn btn-outline" onclick="goToStep(5)">&#8592; Back</button>
+      <button class="btn btn-primary" id="btn-submit" onclick="submitProfile()">&#128190; Save Profile</button>
+    </div>
+  </div>
+
+  <!-- ===== SUCCESS ===== -->
+  <div class="step-panel" id="panel-success">
+    <div class="success-wrap">
+      <div class="big-check">&#127881;</div>
+      <h2>Profile Saved!</h2>
+      <p id="success-msg">Your details have been saved to the Prajwalika family database.</p>
+      <div class="success-links">
+        <button class="link-gold" style="border:none;cursor:pointer;font-size:0.9rem;font-weight:600;padding:11px 22px;border-radius:10px;" onclick="viewMyProfile()">&#128196; View My Profile</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== VIEW MY PROFILE ===== -->
+  <div class="step-panel" id="panel-view">
+    <div class="section-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div>
+        <h2>&#128100; My Profile</h2>
+        <p id="view-subtitle">Your saved details</p>
+      </div>
+      <button class="btn btn-outline" style="width:auto;padding:9px 20px;" onclick="goToStep(1)">&#9999; Edit Profile</button>
+    </div>
+
+    <!-- Personal -->
+    <div class="card">
+      <div class="card-title">&#128100; Personal Details</div>
+      <div class="view-grid" id="vg-personal"></div>
+    </div>
+    <!-- Family -->
+    <div class="card">
+      <div class="card-title">&#128106; Family Details</div>
+      <div class="view-grid" id="vg-family"></div>
+    </div>
+    <!-- Background -->
+    <div class="card">
+      <div class="card-title">&#127968; Family Background</div>
+      <div class="view-grid" id="vg-background"></div>
+    </div>
+    <!-- Education -->
+    <div class="card">
+      <div class="card-title">&#127891; Education</div>
+      <div class="view-grid" id="vg-education"></div>
+    </div>
+    <!-- Professional -->
+    <div class="card">
+      <div class="card-title">&#128188; Professional</div>
+      <div class="view-grid" id="vg-professional"></div>
+    </div>
+    <!-- Address & Community -->
+    <div class="card">
+      <div class="card-title">&#127968; Address &amp; Community</div>
+      <div class="view-grid" id="vg-community"></div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+  const SUPABASE_URL      = 'https://jtnxkkirnhyuexfyzvun.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0bnhra2lybmh5dWV4Znl6dnVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MzI1OTcsImV4cCI6MjA5MzMwODU5N30.CZPm1U-PFh3pr0CchlEIYhgJR4BR9zJ2pBNy8l2sxok';
+
+  const { createClient } = supabase;
+  const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let currentPhone  = '';
+  let currentStep   = 0;
+  let existingProfile = null;
+
+  // ---- Populate year dropdowns ----
+  function buildYearDropdowns() {
+    const ids = ['e-school-year','e-inter-year','e-grad-year','e-pg-year','e-other-year'];
+    ids.forEach(id => {
+      const sel = document.getElementById(id);
+      sel.innerHTML = '<option value="">-- Year --</option>';
+      for (let y = 2026; y >= 2000; y--) {
+        sel.innerHTML += `<option value="${y}">${y}</option>`;
+      }
+    });
+  }
+  buildYearDropdowns();
+
+  // ---- Normalise phone ----
+  function normPhone(v) { return v.replace(/\D/g,'').slice(-10); }
+
+  // ---- Step 0: identify user ----
+  async function startProfile() {
+    const raw   = document.getElementById('ph-input').value.trim();
+    const phone = normPhone(raw);
+    const errEl = document.getElementById('ph-error');
+
+    if (phone.length < 10) { errEl.textContent = 'Please enter a valid 10-digit mobile number.'; return; }
+    errEl.textContent = '';
+    currentPhone = phone;
+
+    const btn = document.getElementById('btn-start');
+    btn.innerHTML = '<span class="spinner"></span> Checking…';
+    btn.disabled = true;
+
+    try {
+      // Look up attendee and verify attendance is marked
+      const { data: att } = await db.from('attendees').select('full_name, attended')
+        .or(`mobile_number.eq.${phone},mobile_number.eq.+91${phone},mobile_number.eq.91${phone}`)
+        .maybeSingle();
+
+      if (!att) {
+        errEl.textContent = 'This number is not in our records. Please mark your attendance at the event first.';
+        return;
+      }
+
+      if (!att.attended) {
+        errEl.textContent = 'You must mark your attendance before filling the profile. Please go to the attendance page first.';
+        return;
+      }
+
+      // Look up existing profile
+      const { data: prof } = await db.from('profiles')
+        .select('*').eq('mobile_number', phone).maybeSingle();
+
+      existingProfile = prof;
+
+      document.getElementById('profile-banner').style.display = 'block';
+      document.getElementById('profile-banner').textContent =
+        `Welcome, ${att.full_name}! Please fill in your complete profile below.`;
+
+      if (prof) {
+        document.getElementById('update-banner').style.display = 'block';
+        prefillForm(prof);
+      }
+
+      document.getElementById('p-mobile').value = phone;
+      if (!prof) document.getElementById('p-name').value = att.full_name || '';
+
+      showStep(1);
+    } catch (e) {
+      errEl.textContent = 'Error: ' + e.message;
+    } finally {
+      btn.innerHTML = 'Continue &#8594;';
+      btn.disabled = false;
+    }
+  }
+
+  // ---- Navigation ----
+  function showStep(n) {
+    document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+    const panelId = (n === 'success' || n === 'view') ? 'panel-' + n : 'panel-' + n;
+    document.getElementById(panelId).classList.add('active');
+
+    if (n !== 0 && n !== 'success' && n !== 'view') {
+      document.getElementById('progress-wrap').style.display = 'block';
+      document.querySelectorAll('.step-tab').forEach((t, i) => {
+        t.classList.remove('active','done');
+        if (i + 1 === n) t.classList.add('active');
+        else if (i + 1 < n) t.classList.add('done');
+      });
+    } else {
+      document.getElementById('progress-wrap').style.display = 'none';
+    }
+    currentStep = n;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function goToStep(n) { showStep(n); }
+
+  // ---- Conditional visibility ----
+  function onMaritalChange() {
+    const val = document.querySelector('input[name="marital"]:checked')?.value;
+    const showMarried = val === 'Married';
+    document.getElementById('married-section').classList.toggle('show', showMarried);
+    // sync kids card in step 2
+    syncKidsCard();
+    if (!showMarried) {
+      document.getElementById('kids-section').classList.remove('show');
+    }
+  }
+
+  function onKidsChange() {
+    const n = parseInt(document.getElementById('p-kids').value) || 0;
+    document.getElementById('kids-section').classList.toggle('show', n > 0);
+    syncKidsCard();
+  }
+
+  function syncKidsCard() {
+    const n = parseInt(document.getElementById('p-kids').value) || 0;
+    document.getElementById('kids-card').style.display = n > 0 ? 'block' : 'none';
+  }
+
+  function onEmployedChange() {
+    const val = document.querySelector('input[name="employed"]:checked')?.value;
+    document.getElementById('emp-type-section').classList.toggle('show', val === 'Yes');
+    if (val !== 'Yes') {
+      ['sect-self','sect-pvt','sect-govt'].forEach(id =>
+        document.getElementById(id).classList.remove('show'));
+    }
+  }
+
+  function onEmpTypeChange() {
+    const val = document.querySelector('input[name="emptype"]:checked')?.value;
+    document.getElementById('sect-self').classList.toggle('show',  val === 'Self Employed');
+    document.getElementById('sect-pvt').classList.toggle('show',   val === 'Private Employment');
+    document.getElementById('sect-govt').classList.toggle('show',
+      val === 'Govt Job-State' || val === 'Govt Job-Central');
+  }
+
+  function onGradChange() {
+    // nothing to conditionally hide, just placeholder
+  }
+
+  // ---- Prefill form for existing profile ----
+  function prefillForm(p) {
+    setVal('p-name',        p.full_name);
+    setVal('p-dob',         p.date_of_birth);
+    setVal('p-mobile',      p.mobile_number);
+    setVal('p-district',    p.native_district);
+    setVal('p-village',     p.native_village);
+    setVal('p-anniversary', p.marriage_anniversary);
+    setVal('p-kids',        p.no_of_kids);
+    setVal('p-kids-names',  p.kids_names);
+
+    setRadio('gender',  p.gender);
+    setRadio('marital', p.marital_status);
+
+    setVal('f-father',  p.father_name);
+    setVal('f-mother',  p.mother_name);
+    setVal('f-spouse',  p.spouse_name);
+    setVal('f-kids',    p.kids_names);
+
+    setVal('bg-father', p.father_profession);
+    setVal('bg-mother', p.mother_profession);
+    setVal('bg-spouse', p.spouse_profession);
+
+    setVal('e-school',      p.school_10th);
+    setVal('e-school-year', p.school_10th_year);
+    setVal('e-inter',       p.intermediate_college);
+    setVal('e-inter-year',  p.intermediate_year);
+    setVal('e-grad-degree', p.graduation_degree);
+    setVal('e-grad-spec',   p.graduation_specialization);
+    setVal('e-grad-year',   p.graduation_year);
+    setVal('e-pg-degree',   p.pg_degree);
+    setVal('e-pg-spec',     p.pg_specialization);
+    setVal('e-pg-year',     p.pg_year);
+    setVal('e-other',       p.other_higher_studies);
+    setVal('e-other-year',  p.other_higher_studies_year);
+
+    setRadio('employed', p.is_employed);
+    setRadio('emptype',  p.employment_type);
+
+    setVal('pr-self',       p.self_employment_details);
+    setVal('pr-company',    p.company_name);
+    setVal('pr-pvt-desig',  p.private_designation);
+    setVal('pr-dept',       p.govt_department);
+    setVal('pr-govt-desig', p.govt_designation);
+
+    setVal('addr-current',  p.current_address);
+    setVal('comm-support',  p.support_needed);
+    setVal('comm-service',  p.service_can_give);
+
+    // Trigger conditional displays
+    setTimeout(() => {
+      onMaritalChange();
+      onKidsChange();
+      onEmployedChange();
+      onEmpTypeChange();
+    }, 50);
+  }
+
+  function setVal(id, val) {
+    const el = document.getElementById(id);
+    if (el && val !== null && val !== undefined) el.value = val;
+  }
+  function setRadio(name, val) {
+    if (!val) return;
+    const el = document.querySelector(`input[name="${name}"][value="${val}"]`);
+    if (el) el.checked = true;
+  }
+
+  // ---- Collect all form data ----
+  function collectForm() {
+    const getRadio = n => document.querySelector(`input[name="${n}"]:checked`)?.value || null;
+    const getVal   = id => { const el = document.getElementById(id); return el ? (el.value.trim() || null) : null; };
+
+    return {
+      mobile_number:             currentPhone,
+      full_name:                 getVal('p-name'),
+      date_of_birth:             getVal('p-dob')         || null,
+      gender:                    getRadio('gender'),
+      native_district:           getVal('p-district'),
+      native_village:            getVal('p-village'),
+      marital_status:            getRadio('marital'),
+      no_of_kids:                parseInt(getVal('p-kids')) || 0,
+      marriage_anniversary:      getVal('p-anniversary') || null,
+      kids_names:                getVal('p-kids-names') || getVal('f-kids'),
+
+      father_name:               getVal('f-father'),
+      mother_name:               getVal('f-mother'),
+      spouse_name:               getVal('f-spouse'),
+
+      father_profession:         getVal('bg-father'),
+      mother_profession:         getVal('bg-mother'),
+      spouse_profession:         getVal('bg-spouse'),
+
+      school_10th:                getVal('e-school'),
+      school_10th_year:           getVal('e-school-year') ? parseInt(getVal('e-school-year')) : null,
+      intermediate_college:       getVal('e-inter'),
+      intermediate_year:          getVal('e-inter-year')  ? parseInt(getVal('e-inter-year'))  : null,
+      graduation_degree:          getVal('e-grad-degree'),
+      graduation_specialization:  getVal('e-grad-spec'),
+      graduation_year:            getVal('e-grad-year')   ? parseInt(getVal('e-grad-year'))   : null,
+      pg_degree:                  getVal('e-pg-degree'),
+      pg_specialization:          getVal('e-pg-spec'),
+      pg_year:                    getVal('e-pg-year')     ? parseInt(getVal('e-pg-year'))     : null,
+      other_higher_studies:       getVal('e-other'),
+      other_higher_studies_year:  getVal('e-other-year')  ? parseInt(getVal('e-other-year'))  : null,
+
+      is_employed:               getRadio('employed'),
+      employment_type:           getRadio('emptype'),
+      self_employment_details:   getVal('pr-self'),
+      company_name:              getVal('pr-company'),
+      private_designation:       getVal('pr-pvt-desig'),
+      govt_department:           getVal('pr-dept'),
+      govt_designation:          getVal('pr-govt-desig'),
+
+      current_address:           getVal('addr-current'),
+      support_needed:            getVal('comm-support'),
+      service_can_give:          getVal('comm-service'),
+    };
+  }
+
+  // ---- Submit ----
+  async function submitProfile() {
+    const payload = collectForm();
+
+    if (!payload.full_name) { alert('Please enter your full name in the Personal Details step.'); goToStep(1); return; }
+
+    const btn = document.getElementById('btn-submit');
+    btn.innerHTML = '<span class="spinner"></span> Saving…';
+    btn.disabled = true;
+
+    try {
+      const { error } = await db.from('profiles')
+        .upsert(payload, { onConflict: 'mobile_number' });
+
+      if (error) throw error;
+
+      document.getElementById('success-msg').textContent =
+        `Thank you, ${payload.full_name}! Your profile has been ${existingProfile ? 'updated' : 'saved'} successfully in the Prajwalika family database.`;
+
+      showStep('success');
+    } catch (e) {
+      alert('Error saving profile: ' + e.message);
+    } finally {
+      btn.innerHTML = '&#128190; Save Profile';
+      btn.disabled = false;
+    }
+  }
+
+  // ---- View My Profile ----
+  async function viewMyProfile() {
+    const { data: p, error } = await db.from('profiles')
+      .select('*').eq('mobile_number', currentPhone).maybeSingle();
+    if (error || !p) { alert('Could not load profile. Please try again.'); return; }
+
+    document.getElementById('view-subtitle').textContent = p.full_name || '';
+
+    function vi(label, value, span) {
+      const v = (value !== null && value !== undefined && value !== '') ? value : null;
+      return `<div class="view-item${span ? ' ' + span : ''}">
+        <div class="vi-label">${label}</div>
+        <div class="vi-value${v ? '' : ' empty'}">${v || 'Not provided'}</div>
+      </div>`;
+    }
+
+    document.getElementById('vg-personal').innerHTML =
+      vi('Full Name',          p.full_name) +
+      vi('Gender',             p.gender) +
+      vi('Date of Birth',      p.date_of_birth) +
+      vi('Native District',    p.native_district) +
+      vi('Native Village',     p.native_village) +
+      vi('Mobile Number',      p.mobile_number) +
+      vi('Marital Status',     p.marital_status) +
+      vi('Marriage Anniversary', p.marriage_anniversary) +
+      vi('No. of Kids',        p.no_of_kids > 0 ? p.no_of_kids : null) +
+      vi('Kids Names',         p.kids_names, 'span3');
+
+    document.getElementById('vg-family').innerHTML =
+      vi("Father's Name",  p.father_name) +
+      vi("Mother's Name",  p.mother_name) +
+      vi("Spouse's Name",  p.spouse_name);
+
+    document.getElementById('vg-background').innerHTML =
+      vi("Father's Profession",  p.father_profession) +
+      vi("Mother's Profession",  p.mother_profession) +
+      vi("Spouse's Profession",  p.spouse_profession);
+
+    document.getElementById('vg-education').innerHTML =
+      vi('10th School',            p.school_10th) +
+      vi('10th Passout Year',      p.school_10th_year) +
+      vi('',                       null) +
+      vi('Intermediate College',   p.intermediate_college) +
+      vi('Intermediate Passout',   p.intermediate_year) +
+      vi('',                       null) +
+      vi('Graduation Degree',      p.graduation_degree) +
+      vi('Graduation Spec.',       p.graduation_specialization) +
+      vi('Graduation Year',        p.graduation_year) +
+      vi('PG Degree',              p.pg_degree) +
+      vi('PG Specialisation',      p.pg_specialization) +
+      vi('PG Year',                p.pg_year) +
+      vi('Other Higher Studies',   p.other_higher_studies, 'span2') +
+      vi('Year',                   p.other_higher_studies_year);
+
+    document.getElementById('vg-professional').innerHTML =
+      vi('Employed?',         p.is_employed) +
+      vi('Employment Type',   p.employment_type) +
+      vi('',                  null) +
+      vi('Self Employment Details', p.self_employment_details, 'span3') +
+      vi('Company Name',      p.company_name) +
+      vi('Designation (Pvt)', p.private_designation) +
+      vi('',                  null) +
+      vi('Govt Department',   p.govt_department) +
+      vi('Designation (Govt)',p.govt_designation) +
+      vi('',                  null);
+
+    document.getElementById('vg-community').innerHTML =
+      vi('Current Address',        p.current_address, 'span3') +
+      vi('Support Needed from Prajwalika', p.support_needed, 'span3') +
+      vi('Service Can Give to Prajwalika', p.service_can_give, 'span3');
+
+    showStep('view');
+  }
+</script>
+</body>
+</html>
